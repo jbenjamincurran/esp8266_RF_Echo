@@ -1,0 +1,69 @@
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include "fauxmoESP.h"
+#include <RCSwitch.h>
+
+#define WIFI_SSID "**********"
+#define WIFI_PASS ""**********""
+#define SERIAL_BAUDRATE 115200
+
+fauxmoESP fauxmo;
+RCSwitch mySwitch = RCSwitch();
+
+void wifiSetup() {
+
+  // Set WIFI module to STA mode
+  WiFi.mode(WIFI_STA);
+
+  // Connect
+  Serial.printf("[WIFI] Connecting to %s ", WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+
+  // Wait
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(100);
+  }
+  Serial.println();
+
+  // Connected!
+  Serial.printf("[WIFI] STATION Mode, SSID: %s, IP address: %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+
+}
+
+void callback(uint8_t device_id, const char * device_name, bool state) {
+  Serial.printf("[MAIN] %s state: %s\n", device_name, state ? "ON" : "OFF");
+  if ( (strcmp(device_name, "Fan") == 0) ) {
+    if (state) {
+      mySwitch.send(5575987, 24);
+    } else {
+      mySwitch.send(5575996, 24);
+    }
+  }
+  if ( (strcmp(device_name, "Projector") == 0) ) {
+    if (state) {
+      mySwitch.send(5576131, 24);
+    } else {
+      mySwitch.send(5576140, 24);
+    }
+  }
+
+}
+
+void setup() {
+  mySwitch.enableTransmit(4);
+  mySwitch.setPulseLength(189);
+  Serial.begin(SERIAL_BAUDRATE);
+  Serial.println();
+  Serial.println();
+
+  wifiSetup();
+
+  fauxmo.addDevice("Fan");
+  fauxmo.addDevice("Projector");
+  fauxmo.onMessage(callback);
+}
+
+void loop() {
+  fauxmo.handle();
+}
